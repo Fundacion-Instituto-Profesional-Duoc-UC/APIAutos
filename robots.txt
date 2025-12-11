@@ -1,0 +1,23 @@
+# Bloque para todos los rastreadores
+User-agent: *
+
+# Permitimos el acceso al index, al mantenedor y a los archivos de lógica (Front-end y API simulada).
+Allow: /index.html
+Allow: /mantenedor_autos.html
+Allow: /script_autos.js
+Allow: /api.js
+Allow: /styles.css
+
+# Bloque específico para Googlebot
+User-agent: Googlebot
+# Asumiendo que /old-version/ no es relevante para el nuevo sistema
+Disallow: /old-version/
+Crawl-delay: 5
+
+# Bloque específico para un bot de imágenes
+User-agent: Googlebot-Image
+Disallow: /images/private/
+
+# Bloque para un bot específico que quieres que rastree todo
+User-agent: MyCustomBot
+Allow: /
