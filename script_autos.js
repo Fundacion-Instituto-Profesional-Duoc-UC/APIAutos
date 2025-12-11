@@ -2,7 +2,7 @@
 import { getAllCars, createCar, updateCar, deleteCar, getCarById } from './api.js';
 
 // ------------------------------------
-// 1. LÓGICA DEL LOGIN (Y LOGOUT)
+// 1. LÓGICA DEL LOGIN Y LOGOUT
 // ------------------------------------
 
 function handleLogin() {
@@ -16,9 +16,8 @@ function handleLogin() {
         const pass = document.getElementById("password").value.trim();
         const errorMsg = document.getElementById("errorMsg");
 
-        // Simulación de credenciales
         if (user === "duoc" && pass === "duoc123") {
-            // Guarda un token de sesión simulado
+            // Guarda un token simulado y redirige a la página correcta
             localStorage.setItem("access_token", "session-simulated-token-ok"); 
             window.location.href = "mantenedor_autos.html";
         } else {
@@ -46,10 +45,11 @@ function handleLogout() {
 // ------------------------------------
 
 function handleMantenedor() {
+    // AHORA BUSCA EL ID: "carForm" (que está en mantenedor_autos.html)
     const carForm = document.getElementById("carForm");
     if (!carForm) return;
 
-    // 🛑 BARRERA DE SEGURIDAD: Revisa el token antes de cargar
+    // Control de seguridad
     const token = localStorage.getItem("access_token");
     if (!token) {
       window.location.href = "index.html";
@@ -74,7 +74,7 @@ function handleMantenedor() {
                       <td>${car.id}</td>
                       <td>${car.modelo}</td>
                       <td>${car.anio}</td>
-                      <td>$${car.precio ? car.precio.toLocaleString('es-CL') : 'N/A'}</td>
+                      <td>$${car.precio ? parseFloat(car.precio).toLocaleString('es-CL') : 'N/A'}</td>
                       <td>${car.marca_id}</td>
                       <td>
                         <button class="btn btn-warning btn-sm edit-btn" data-id="${car.id}" title="Editar"><i class="fas fa-edit"></i></button>
@@ -84,7 +84,6 @@ function handleMantenedor() {
                   `).join("")
                 : '<tr><td colspan="6" class="text-center text-muted">No hay autos registrados. Añade uno.</td></tr>';
 
-            // Reasignar listeners
             document.querySelectorAll(".delete-btn").forEach(button => {
                 button.addEventListener("click", handleDelete);
             });
@@ -94,8 +93,8 @@ function handleMantenedor() {
 
         } catch (error) {
             console.error("Error al cargar los datos:", error);
-            alert(`Error de conexión con la API: ${error.message}`);
-            carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Fallo al conectar o Error de la API.</td></tr>';
+            alert(`Error al cargar la tabla: ${error.message}`);
+            carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Fallo al conectar con el servidor.</td></tr>';
         }
     }
 
@@ -103,15 +102,15 @@ function handleMantenedor() {
     carForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // 1. Recolección de los campos del formulario (IDs: modelo, anio, precio, marca_id)
+        // Obtiene valores por los IDs correctos del HTML
         const modelo = document.getElementById("modelo").value;
         const anio = parseInt(document.getElementById("anio").value);
         const precio = parseFloat(document.getElementById("precio").value); 
         const marca_id = parseInt(document.getElementById("marca_id").value); 
 
-        // 2. Comprobación básica de datos
+        // Validaciones numéricas básicas
         if (isNaN(anio) || isNaN(precio) || isNaN(marca_id)) {
-             alert("Por favor, introduce valores numéricos válidos para Año, Precio e ID de Marca.");
+             alert("Error: Año, Precio e ID de Marca deben ser valores numéricos.");
              return;
         }
 
@@ -123,11 +122,9 @@ function handleMantenedor() {
 
         try {
             if (carId) {
-                // Modo Edición (PUT)
                 await updateCar(parseInt(carId), carData);
                 alert("Auto actualizado con éxito!");
             } else {
-                // Modo Creación (POST)
                 await createCar(carData);
                 alert("Auto creado con éxito!");
             }
@@ -148,7 +145,7 @@ function handleMantenedor() {
     // ELIMINAR
     async function handleDelete(e) {
         const carId = parseInt(e.target.dataset.id);
-        if (!confirm(`¿Estás seguro de eliminar el auto con ID ${carId}? Esta acción es permanente en la API.`)) return;
+        if (!confirm(`¿Estás seguro de eliminar el auto con ID ${carId}?`)) return;
 
         e.target.disabled = true;
         e.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -164,7 +161,7 @@ function handleMantenedor() {
         }
     }
 
-    // EDITAR (FIXED: Maneja el array que devuelve el PHP)
+    // EDITAR (Extrae el objeto del array devuelto por la API)
     async function handleEdit(e) {
         const carId = parseInt(e.target.dataset.id);
         
@@ -175,15 +172,15 @@ function handleMantenedor() {
         try {
             const result = await getCarById(carId);
             
-            // CORRECCIÓN: Tu PHP devuelve un array [{...}], extraemos el primer objeto.
+            // CORRECCIÓN CLAVE: Tu PHP devuelve un array de 1 elemento, lo extraemos.
             const carToEdit = Array.isArray(result) && result.length > 0 ? result[0] : null; 
 
             if (!carToEdit) {
-                 alert("Auto no encontrado en la respuesta de la API.");
+                 alert("Auto no encontrado.");
                  return;
             }
             
-            // Llenar el formulario con los datos de la API
+            // Rellenar los campos
             document.getElementById("modelo").value = carToEdit.modelo;
             document.getElementById("anio").value = carToEdit.anio;
             document.getElementById("precio").value = carToEdit.precio;
@@ -194,7 +191,7 @@ function handleMantenedor() {
 
         } catch (error) {
             console.error("Error al cargar auto para edición:", error);
-            alert(`Auto no encontrado para edición: ${error.message}`);
+            alert(`Error al cargar datos para edición: ${error.message}`);
         } finally {
             e.target.innerHTML = originalIcon;
             e.target.disabled = false;
@@ -211,9 +208,11 @@ function handleMantenedor() {
 // ------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Si la página es index.html (tiene loginForm)
     if (document.getElementById("loginForm")) {
         handleLogin();
-    } else if (document.getElementById("carForm")) { // Busca el ID del formulario de autos
+    // Si la página es mantenedor_autos.html (tiene carForm)
+    } else if (document.getElementById("carForm")) { 
         handleMantenedor();
     }
 });
