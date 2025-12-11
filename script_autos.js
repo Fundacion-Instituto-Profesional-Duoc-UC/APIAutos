@@ -1,15 +1,12 @@
 // script_autos.js
 import { getAllCars, createCar, updateCar, deleteCar, getCarById } from './api.js';
 
-// ------------------------------------
-// 1. LÓGICA DEL LOGIN (Y LOGOUT)
-// ------------------------------------
-
+// ... (El código de handleLogin y handleLogout permanece igual) ...
 function handleLogin() {
+    // ... (código de handleLogin) ...
     const loginForm = document.getElementById("loginForm");
     if (!loginForm) return;
 
-    // ... (Lógica de login existente) ...
     loginForm.addEventListener("submit", function(event) {
         event.preventDefault();
 
@@ -39,9 +36,8 @@ function handleLogout() {
     }
 }
 
-
 // ------------------------------------
-// 2. LÓGICA DEL MANTENEDOR
+// 2. LÓGICA DEL MANTENEDOR (ACTUALIZADA)
 // ------------------------------------
 
 function handleMantenedor() {
@@ -55,7 +51,6 @@ function handleMantenedor() {
       return;
     }
 
-    // Inicializa el botón de Cerrar Sesión
     handleLogout();
 
     const carsTableBody = document.getElementById("carsTableBody");
@@ -137,9 +132,8 @@ function handleMantenedor() {
         }
     });
 
-    // ELIMINAR Y EDITAR
+    // ELIMINAR
     async function handleDelete(e) {
-        // ... (Lógica de eliminación existente, utiliza el token) ...
         const carId = parseInt(e.target.dataset.id);
         if (!confirm(`¿Estás seguro de eliminar el auto con ID ${carId}? Esta acción es permanente en la API.`)) return;
 
@@ -157,8 +151,8 @@ function handleMantenedor() {
         }
     }
 
+    // EDITAR (FIXED)
     async function handleEdit(e) {
-        // ... (Lógica de edición existente, utiliza el token) ...
         const carId = parseInt(e.target.dataset.id);
         
         const originalIcon = e.target.innerHTML;
@@ -166,7 +160,15 @@ function handleMantenedor() {
         e.target.disabled = true;
 
         try {
-            const carToEdit = await getCarById(carId);
+            const result = await getCarById(carId);
+            
+            // FIX: Tu PHP devuelve un array [{...}], extraemos el objeto
+            const carToEdit = Array.isArray(result) && result.length > 0 ? result[0] : null; 
+
+            if (!carToEdit) {
+                 alert("Auto no encontrado en la respuesta de la API.");
+                 return;
+            }
             
             // Llenar el formulario con los datos de la API
             document.getElementById("modelo").value = carToEdit.modelo;
