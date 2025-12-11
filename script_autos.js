@@ -1,9 +1,11 @@
 // script_autos.js
 import { getAllCars, createCar, updateCar, deleteCar, getCarById } from './api.js';
 
-// ... (El código de handleLogin y handleLogout permanece igual) ...
+// ------------------------------------
+// 1. LÓGICA DEL LOGIN (Y LOGOUT)
+// ------------------------------------
+
 function handleLogin() {
-    // ... (código de handleLogin) ...
     const loginForm = document.getElementById("loginForm");
     if (!loginForm) return;
 
@@ -14,7 +16,9 @@ function handleLogin() {
         const pass = document.getElementById("password").value.trim();
         const errorMsg = document.getElementById("errorMsg");
 
+        // Simulación de credenciales
         if (user === "duoc" && pass === "duoc123") {
+            // Guarda un token de sesión simulado
             localStorage.setItem("access_token", "session-simulated-token-ok"); 
             window.location.href = "mantenedor_autos.html";
         } else {
@@ -36,8 +40,9 @@ function handleLogout() {
     }
 }
 
+
 // ------------------------------------
-// 2. LÓGICA DEL MANTENEDOR (ACTUALIZADA)
+// 2. LÓGICA DEL MANTENEDOR (CRUD)
 // ------------------------------------
 
 function handleMantenedor() {
@@ -98,11 +103,17 @@ function handleMantenedor() {
     carForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // 1. Recolección de los nuevos campos
+        // 1. Recolección de los campos del formulario (IDs: modelo, anio, precio, marca_id)
         const modelo = document.getElementById("modelo").value;
         const anio = parseInt(document.getElementById("anio").value);
         const precio = parseFloat(document.getElementById("precio").value); 
         const marca_id = parseInt(document.getElementById("marca_id").value); 
+
+        // 2. Comprobación básica de datos
+        if (isNaN(anio) || isNaN(precio) || isNaN(marca_id)) {
+             alert("Por favor, introduce valores numéricos válidos para Año, Precio e ID de Marca.");
+             return;
+        }
 
         const carData = { modelo, anio, precio, marca_id };
         const carId = carIdInput.value;
@@ -112,9 +123,11 @@ function handleMantenedor() {
 
         try {
             if (carId) {
+                // Modo Edición (PUT)
                 await updateCar(parseInt(carId), carData);
                 alert("Auto actualizado con éxito!");
             } else {
+                // Modo Creación (POST)
                 await createCar(carData);
                 alert("Auto creado con éxito!");
             }
@@ -151,7 +164,7 @@ function handleMantenedor() {
         }
     }
 
-    // EDITAR (FIXED)
+    // EDITAR (FIXED: Maneja el array que devuelve el PHP)
     async function handleEdit(e) {
         const carId = parseInt(e.target.dataset.id);
         
@@ -162,7 +175,7 @@ function handleMantenedor() {
         try {
             const result = await getCarById(carId);
             
-            // FIX: Tu PHP devuelve un array [{...}], extraemos el objeto
+            // CORRECCIÓN: Tu PHP devuelve un array [{...}], extraemos el primer objeto.
             const carToEdit = Array.isArray(result) && result.length > 0 ? result[0] : null; 
 
             if (!carToEdit) {
@@ -200,7 +213,7 @@ function handleMantenedor() {
 document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById("loginForm")) {
         handleLogin();
-    } else if (document.getElementById("carForm")) {
+    } else if (document.getElementById("carForm")) { // Busca el ID del formulario de autos
         handleMantenedor();
     }
 });
