@@ -2,13 +2,14 @@
 import { getAllCars, createCar, updateCar, deleteCar, getCarById } from './api.js';
 
 // ------------------------------------
-// 1. LÓGICA DEL LOGIN (SIMULADA)
+// 1. LÓGICA DEL LOGIN (Y LOGOUT)
 // ------------------------------------
 
 function handleLogin() {
     const loginForm = document.getElementById("loginForm");
     if (!loginForm) return;
 
+    // ... (Lógica de login existente) ...
     loginForm.addEventListener("submit", function(event) {
         event.preventDefault();
 
@@ -16,9 +17,7 @@ function handleLogin() {
         const pass = document.getElementById("password").value.trim();
         const errorMsg = document.getElementById("errorMsg");
 
-        // Simulación de credenciales: Solo permite avanzar si son correctas
         if (user === "duoc" && pass === "duoc123") {
-            // Simula la recepción de un token y lo guarda
             localStorage.setItem("access_token", "session-simulated-token-ok"); 
             window.location.href = "mantenedor_autos.html";
         } else {
@@ -26,6 +25,18 @@ function handleLogin() {
             errorMsg.textContent = "Usuario o contraseña incorrectos.";
         }
     });
+}
+
+function handleLogout() {
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm("¿Estás seguro de que quieres cerrar la sesión?")) {
+                localStorage.removeItem("access_token");
+                window.location.href = "index.html";
+            }
+        });
+    }
 }
 
 
@@ -44,13 +55,16 @@ function handleMantenedor() {
       return;
     }
 
+    // Inicializa el botón de Cerrar Sesión
+    handleLogout();
+
     const carsTableBody = document.getElementById("carsTableBody");
     const saveCarBtn = document.getElementById("saveCarBtn");
     const carIdInput = document.getElementById("carId");
 
     // RENDERIZADO Y CARGA DE DATOS DESDE LA API
     async function renderTable() {
-        carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Cargando datos...</td></tr>';
+        carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</td></tr>';
         try {
             const records = await getAllCars();
             
@@ -60,15 +74,15 @@ function handleMantenedor() {
                       <td>${car.id}</td>
                       <td>${car.modelo}</td>
                       <td>${car.anio}</td>
-                      <td>$${car.precio.toLocaleString('es-CL')}</td>
+                      <td>$${car.precio ? car.precio.toLocaleString('es-CL') : 'N/A'}</td>
                       <td>${car.marca_id}</td>
                       <td>
-                        <button class="btn btn-warning btn-sm edit-btn" data-id="${car.id}">Editar</button>
-                        <button class="btn btn-danger btn-sm delete-btn" data-id="${car.id}">Eliminar</button>
+                        <button class="btn btn-warning btn-sm edit-btn" data-id="${car.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="${car.id}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
                       </td>
                     </tr>
                   `).join("")
-                : '<tr><td colspan="6" class="text-center">No hay autos registrados.</td></tr>';
+                : '<tr><td colspan="6" class="text-center text-muted">No hay autos registrados. Añade uno.</td></tr>';
 
             // Reasignar listeners
             document.querySelectorAll(".delete-btn").forEach(button => {
@@ -81,7 +95,7 @@ function handleMantenedor() {
         } catch (error) {
             console.error("Error al cargar los datos:", error);
             alert(`Error de conexión con la API: ${error.message}`);
-            carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Fallo al conectar con el servidor de la API.</td></tr>';
+            carsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Fallo al conectar o Error de la API.</td></tr>';
         }
     }
 
@@ -92,46 +106,45 @@ function handleMantenedor() {
         // 1. Recolección de los nuevos campos
         const modelo = document.getElementById("modelo").value;
         const anio = parseInt(document.getElementById("anio").value);
-        const precio = parseFloat(document.getElementById("precio").value); // Usar float para dinero
-        const marca_id = parseInt(document.getElementById("marca_id").value); // Es un ID de marca
+        const precio = parseFloat(document.getElementById("precio").value); 
+        const marca_id = parseInt(document.getElementById("marca_id").value); 
 
         const carData = { modelo, anio, precio, marca_id };
         const carId = carIdInput.value;
 
         saveCarBtn.disabled = true;
-        saveCarBtn.textContent = carId ? "Actualizando en API..." : "Guardando en API...";
+        saveCarBtn.innerHTML = carId ? '<i class="fas fa-sync fa-spin"></i> Actualizando...' : '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
         try {
             if (carId) {
-                // Modo Edición (PUT)
                 await updateCar(parseInt(carId), carData);
                 alert("Auto actualizado con éxito!");
             } else {
-                // Modo Creación (POST)
                 await createCar(carData);
                 alert("Auto creado con éxito!");
             }
             
             carForm.reset();
-            carIdInput.value = ''; // Limpiar el ID
-            saveCarBtn.textContent = "Guardar Auto";
+            carIdInput.value = '';
+            saveCarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Auto';
             
         } catch (error) {
             console.error("Error en operación POST/PUT:", error);
             alert(`Error al procesar la solicitud: ${error.message}`);
         } finally {
             saveCarBtn.disabled = false;
-            await renderTable(); // Recargar la tabla
+            await renderTable();
         }
     });
 
     // ELIMINAR Y EDITAR
     async function handleDelete(e) {
+        // ... (Lógica de eliminación existente, utiliza el token) ...
         const carId = parseInt(e.target.dataset.id);
         if (!confirm(`¿Estás seguro de eliminar el auto con ID ${carId}? Esta acción es permanente en la API.`)) return;
 
         e.target.disabled = true;
-        e.target.textContent = 'Eliminando...';
+        e.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
             await deleteCar(carId);
@@ -145,11 +158,11 @@ function handleMantenedor() {
     }
 
     async function handleEdit(e) {
+        // ... (Lógica de edición existente, utiliza el token) ...
         const carId = parseInt(e.target.dataset.id);
         
-        // Bloquear temporalmente el botón de edición
-        const originalText = e.target.textContent;
-        e.target.textContent = 'Cargando...';
+        const originalIcon = e.target.innerHTML;
+        e.target.innerHTML = '<i class="fas fa-sync fa-spin"></i>';
         e.target.disabled = true;
 
         try {
@@ -161,15 +174,14 @@ function handleMantenedor() {
             document.getElementById("precio").value = carToEdit.precio;
             document.getElementById("marca_id").value = carToEdit.marca_id;
             
-            // Establecer el ID para el modo edición
             carIdInput.value = carId;
-            saveCarBtn.textContent = "Actualizar Auto";
+            saveCarBtn.innerHTML = '<i class="fas fa-arrow-alt-circle-up"></i> Actualizar Auto';
 
         } catch (error) {
             console.error("Error al cargar auto para edición:", error);
             alert(`Auto no encontrado para edición: ${error.message}`);
         } finally {
-            e.target.textContent = originalText;
+            e.target.innerHTML = originalIcon;
             e.target.disabled = false;
         }
     }
