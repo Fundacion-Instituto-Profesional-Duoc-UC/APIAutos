@@ -1,77 +1,78 @@
 // api.js
 
-let carsDatabase = [
-    { id: 1, marca: 'Toyota', modelo: 'Corolla', anio: 2022, color: 'Rojo' },
-    { id: 2, marca: 'Ford', modelo: 'F-150', anio: 2021, color: 'Negro' },
-    { id: 3, marca: 'Tesla', modelo: 'Model 3', anio: 2023, color: 'Blanco' }
-];
-let nextId = 4; // Para simular la auto-generación de IDs
-
-// Simula una latencia de red para que las funciones sean asíncronas (Promises)
-const simulateLatency = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
+const API_BASE_URL = 'https://mantistcy.cl/api_autos/autos';
+const AUTH_TOKEN = 'Bearer serviciosDuoc2026'; // El token proporcionado
 
 /**
- * SIMULACIÓN DEL ENDPOINT GET /autos
- * @returns Promise<Array> Lista de todos los autos.
+ * Función genérica para manejar peticiones Fetch con autenticación.
+ * @param {string} method - Método HTTP (GET, POST, PUT, DELETE).
+ * @param {string} url - URL completa del endpoint.
+ * @param {object | null} data - Datos a enviar en el cuerpo (para POST/PUT).
  */
-export async function getAllCars() {
-    await simulateLatency();
-    return carsDatabase;
-}
-
-/**
- * SIMULACIÓN DEL ENDPOINT GET /autos/{id}
- * @param {number} id - ID del auto a obtener.
- * @returns Promise<Object> El auto encontrado.
- */
-export async function getCarById(id) {
-    await simulateLatency();
-    const car = carsDatabase.find(c => c.id === id);
-    if (!car) {
-        throw new Error("Auto no encontrado");
-    }
-    return car;
-}
-
-/**
- * SIMULACIÓN DEL ENDPOINT POST /autos
- * @param {Object} newCarData - Datos del nuevo auto (sin ID).
- * @returns Promise<Object> El auto creado con su nuevo ID.
- */
-export async function createCar(newCarData) {
-    await simulateLatency();
-    const newCar = {
-        id: nextId++,
-        ...newCarData
+async function apiFetch(method, url, data = null) {
+    const options = {
+        method: method,
+        headers: {
+            'Authorization': AUTH_TOKEN, // Se requiere para todas las operaciones
+            'Content-Type': 'application/json',
+        },
     };
-    carsDatabase.push(newCar);
-    return newCar;
-}
 
-/**
- * SIMULACIÓN DEL ENDPOINT PUT /autos/{id}
- * @param {number} id - ID del auto a actualizar.
- * @param {Object} updatedData - Nuevos datos del auto.
- * @returns Promise<Object> El auto actualizado.
- */
-export async function updateCar(id, updatedData) {
-    await simulateLatency();
-    const index = carsDatabase.findIndex(c => c.id === id);
-    if (index === -1) {
-        throw new Error("Auto no encontrado para actualizar");
+    if (data) {
+        options.body = JSON.stringify(data);
     }
-    carsDatabase[index] = { ...carsDatabase[index], ...updatedData, id: id };
-    return carsDatabase[index];
+
+    try {
+        const response = await fetch(url, options);
+
+        // Manejar errores HTTP (400, 500, etc.)
+        if (!response.ok) {
+            // Intenta leer el mensaje de error del cuerpo de la respuesta si está disponible
+            const errorData = await response.json();
+            throw new Error(`Error en la API (${response.status}): ${errorData.message || response.statusText}`);
+        }
+
+        // DELETE y PUT a menudo responden con 204 o 200 sin contenido en el body
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+            return true;
+        }
+
+        return response.json();
+
+    } catch (error) {
+        console.error("Error de red o de la API:", error);
+        throw error;
+    }
 }
 
-/**
- * SIMULACIÓN DEL ENDPOINT DELETE /autos/{id}
- * @param {number} id - ID del auto a eliminar.
- * @returns Promise<boolean> true si fue eliminado.
- */
+// ----------------------------------------------------
+// IMPLEMENTACIÓN DE ENDPOINTS
+// ----------------------------------------------------
+
+// GET ALL: Obtener todos los autos
+export async function getAllCars() {
+    return apiFetch('GET', API_BASE_URL);
+}
+
+// GET by ID: Obtener auto por ID
+export async function getCarById(id) {
+    const url = `${API_BASE_URL}/${id}`;
+    return apiFetch('GET', url);
+}
+
+// POST: Crear nuevo auto
+export async function createCar(newCarData) {
+    return apiFetch('POST', API_BASE_URL, newCarData);
+}
+
+// PUT: Actualizar auto
+export async function updateCar(id, updatedData) {
+    const url = `${API_BASE_URL}/${id}`;
+    return apiFetch('PUT', url, updatedData);
+}
+
+// DELETE: Eliminar auto
 export async function deleteCar(id) {
-    await simulateLatency();
-    const initialLength = carsDatabase.length;
-    carsDatabase = carsDatabase.filter(c => c.id !== id);
-    return carsDatabase.length < initialLength;
+    const url = `${API_BASE_URL}/${id}`;
+    return apiFetch('DELETE', url);
 }
